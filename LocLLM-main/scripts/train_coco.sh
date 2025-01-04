@@ -30,6 +30,7 @@ CUDA_VISIBLE_DEVICES=$IDX OMP_NUM_THREADS=1 torchrun --nnodes=1 --nproc_per_node
     --image_folder ${data_dir}/coco/train2017 \
     --dino_path ./checkpoints/model_weights/dinov2_vitl14_pretrain.pth \
     --conv_format keypoint \
+    --num_format random \
     --data_augmentation True \
     --tune_mm_mlp_adapter True \
     --freeze_llm False \
