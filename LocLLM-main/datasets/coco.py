@@ -9,7 +9,7 @@ import os
 import numpy as np
 from pycocotools.coco import COCO
 import cv2
-
+import random
 DEFAULT_IMAGE_PATCH_TOKEN = "<im_patch>"
 PREFIX_IMAGE = "Image: "
 PREFIX_NO_IMAGE = "Image: N/A"
@@ -34,7 +34,6 @@ BEGIN_LOC = "<loc>"
 END_LOC = "</loc>"
 BEGIN_QUESTION = "<qes>"
 END_QUESTION = "</qes>"
-
 class COCODataset(Dataset):
     """Dataset for supervised fine-tuning."""
     def __init__(self, data_path: str,
@@ -110,6 +109,10 @@ class COCODataset(Dataset):
         self.tokenizer = tokenizer
         self.list_data_dict = list_data_dict
         self.multimodal_cfg = multimodal_cfg
+
+        assert multimodal_cfg['num_format'] in ["normal" , "round" , "random"]
+        self.num_format = multimodal_cfg['num_format']
+        #self.num_format = multimodal_cfg.get('num_format' , 'random')
         self.conv_format = self.multimodal_cfg.get("conv_format", "keypoint")
         if self.conv_format == 'simple':
             self.conv = conv_simple.copy()
@@ -163,7 +166,16 @@ class COCODataset(Dataset):
         result_dict['joints'] = joints
         result_dict['joints_vis'] = joints_vis
         return result_dict
-    
+    def _get_coordinate(self,x,y):    
+        if self.num_format == "normal":
+            return "[{:.3f},{:.3f}]".format(x, y)
+        if self.num_format == "round":
+            return "[{:.1f},{:.1f}][{:.2f},{:.2f}][{:.3f},{:.3f}]".format(x, y,x,y,x,y)
+        if self.num_format == "random":
+            int_x , int_y = int(x*1000) , int(y*1000)
+            x_1,y_1 = int_x // 100 + (random.random()<(int_x%100) / 100) , int_y // 100 + (random.random()<(int_y%100) / 100)
+            x_2,y_2 = ( int_x // 10 ) + (random.random()<(int_x%10) / 10) ,( int_y // 10 ) + (random.random()<(int_y%10)/10)
+            return "[{:.1f},{:.1f}][{:.2f},{:.2f}][{:.3f},{:.3f}]".format(x_1/10, y_1/10 , x_2/100 , y_2 / 100 , x,y )
     def _parse_data_item(self, i) -> Dict[str, torch.Tensor]:
         use_item = False
         sources = self.list_data_dict[i]
@@ -186,11 +198,12 @@ class COCODataset(Dataset):
         for idx in kpt_ids:
             # if idx not in [0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 14, 15]: continue
             x, y, v = joints[idx, 0], joints[idx, 1], joints_vis[idx, 0]
-            if v < 1: continue
+            if v != 1: continue
             if x < 0 or x >= self.size or y < 0 or y >= self.size: continue
             x = x / self.size
             y = y /self.size
-            location_tokens = "[{:.3f},{:.3f}]".format(x, y)
+            #location_tokens = "[{:.3f},{:.3f}]".format(x, y)
+            location_tokens = self._get_coordinate(x,y)
             kpt_name.append(COCO_KEYPOINT_NAME[idx])
             question.append(KeypointLocationQuestion[COCO_KEYPOINT_NAME[idx]][0])
             kpt_des.append(KeypointLocationDescription[COCO_KEYPOINT_NAME[idx]])
