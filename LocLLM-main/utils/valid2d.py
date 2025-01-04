@@ -136,7 +136,7 @@ def worker(model, tokenizer, dataset, args, output_dir):
                 has_images=batch_has_images,
                 attention_mask=attention_mask,
                 do_sample=False,
-                max_new_tokens=13,
+                max_new_tokens=33,#13
                 output_scores=True,
                 return_dict_in_generate=True
             )
@@ -160,7 +160,8 @@ def worker(model, tokenizer, dataset, args, output_dir):
         s = result_dicts[0]['s']
 
         output_scores = torch.stack(output_scores[:-1], dim=0)
-        pattern = re.compile(r'0\.\d+')
+        #pattern = re.compile(r'0\.\d+')
+        pattern = re.compile(r'0\.\d{3}')
 
         for i in range(len(outputs)):
             # decode coordinates from token

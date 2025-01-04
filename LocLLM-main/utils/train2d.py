@@ -59,6 +59,7 @@ class DataArguments:
     crop_size: int = field(default=224)
     data_augmentation: bool = field(default=False)
     conv_format: str = field(default="keypoint")
+    num_format:str = field(default="normal")
 
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
@@ -143,7 +144,8 @@ def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer,
                                     data_augmentation=data_args.data_augmentation,
                                     image_size=data_args.image_size,
                                     crop_size=data_args.crop_size,
-                                    conv_format=data_args.conv_format))
+                                    conv_format=data_args.conv_format,
+                                    num_format = data_args.num_format))
     data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
     return dict(train_dataset=train_dataset,
                 eval_dataset=None,
@@ -154,6 +156,9 @@ def train():
     parser = transformers.HfArgumentParser(
         (ModelArguments, DataArguments, TrainingArguments, LoRAArguments))
     model_args, data_args, training_args, lora_args = parser.parse_args_into_dataclasses()
+
+
+
 
     model = LocLLMModel.from_pretrained(
         model_args.model_name_or_path,
